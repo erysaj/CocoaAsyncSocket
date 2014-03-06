@@ -3937,7 +3937,8 @@ enum GCDAsyncUdpSocketConfig
 	
 	BOOL waitingForSocket = NO;
 	NSError *socketError = nil;
-	
+	int sendError = errno;
+    
 	if (result == 0)
 	{
 		waitingForSocket = YES;
@@ -3974,7 +3975,14 @@ enum GCDAsyncUdpSocketConfig
 	}
 	else if (socketError)
 	{
-		[self closeWithError:socketError];
+        if (sendError == ENOBUFS)
+		{
+			[self notifyDidNotSendDataWithTag:currentSend->tag dueToError:[self errnoError]];
+			[self endCurrentSend];
+			[self maybeDequeueSend];
+		}
+		else
+			[self closeWithError:socketError];
 	}
 	else // done
 	{
