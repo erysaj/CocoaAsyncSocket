@@ -35,10 +35,19 @@
 
 
 #ifndef GCDAsyncSocketLoggingEnabled
-#define GCDAsyncSocketLoggingEnabled 0
+#ifdef CocoaAsyncSocketLumberjackVersion
+    #define GCDAsyncSocketLoggingEnabled 1
+#else
+    #define GCDAsyncSocketLoggingEnabled 0
+#endif
 #endif
 
+
 #if GCDAsyncSocketLoggingEnabled
+
+#ifndef CocoaAsyncSocketLumberjackVersion
+#define CocoaAsyncSocketLumberjackVersion 1
+#endif
 
 // Logging Enabled - See log level below
 
@@ -46,13 +55,40 @@
 // https://github.com/robbiehanson/CocoaLumberjack
 // 
 // It allows us to do a lot of logging without significantly slowing down the code.
-#import "DDLog.h"
 
+#define LOG_LEVEL_DEF logLevel
 #define LogAsync   YES
 #define LogContext GCDAsyncSocketLoggingContext
 
-#define LogObjc(flg, frmt, ...) LOG_OBJC_MAYBE(LogAsync, logLevel, flg, LogContext, frmt, ##__VA_ARGS__)
-#define LogC(flg, frmt, ...)    LOG_C_MAYBE(LogAsync, logLevel, flg, LogContext, frmt, ##__VA_ARGS__)
+#if (CocoaAsyncSocketLumberjackVersion == 2)
+    #import "DDLogMacros.h"
+
+    #define LOG_FLAG_ERROR    DDLogFlagError
+    #define LOG_FLAG_WARN     DDLogFlagWarning
+    #define LOG_FLAG_INFO     DDLogFlagInfo
+    #define LOG_FLAG_DEBUG    DDLogFlagDebug
+    #define LOG_FLAG_VERBOSE  DDLogFlagVerbose
+
+    #define LogObjc(flg, frmt, ...) LOG_MAYBE(LogAsync, LOG_LEVEL_DEF, flg, LogContext, nil, __PRETTY_FUNCTION__, frmt, ##__VA_ARGS__)
+    #define LogC(flg, frmt, ...)    LOG_MAYBE(LogAsync, LOG_LEVEL_DEF, flg, LogContext, nil, __PRETTY_FUNCTION__, frmt, ##__VA_ARGS__)
+
+    #define LogLevelType DDLogLevel
+    #ifndef GCDAsyncSocketLogLevel
+        #define GCDAsyncSocketLogLevel DDLogLevelVerbose
+    #endif
+#elif (CocoaAsyncSocketLumberjackVersion == 1)
+    #import "DDLog.h"
+
+    #define LogObjc(flg, frmt, ...) LOG_OBJC_MAYBE(LogAsync, LOG_LEVEL_DEF, flg, LogContext, frmt, ##__VA_ARGS__)
+    #define LogC(flg, frmt, ...)    LOG_C_MAYBE(LogAsync, LOG_LEVEL_DEF, flg, LogContext, frmt, ##__VA_ARGS__)
+
+    #define LogLevelType int
+    #ifndef GCDAsyncSocketLogLevel
+        #define GCDAsyncSocketLogLevel LOG_LEVEL_VERBOSE
+    #endif
+#else
+    #error Unknown CocoaLumberjack version.
+#endif
 
 #define LogError(frmt, ...)     LogObjc(LOG_FLAG_ERROR,   (@"%@: " frmt), THIS_FILE, ##__VA_ARGS__)
 #define LogWarn(frmt, ...)      LogObjc(LOG_FLAG_WARN,    (@"%@: " frmt), THIS_FILE, ##__VA_ARGS__)
@@ -67,32 +103,29 @@
 #define LogTrace()              LogObjc(LOG_FLAG_VERBOSE, @"%@: %@", THIS_FILE, THIS_METHOD)
 #define LogCTrace()             LogC(LOG_FLAG_VERBOSE, @"%@: %s", THIS_FILE, __FUNCTION__)
 
-#ifndef GCDAsyncSocketLogLevel
-#define GCDAsyncSocketLogLevel LOG_LEVEL_VERBOSE
-#endif
 
 #ifndef GCDAsyncSocketDynamicLoggingEnabled
 #define GCDAsyncSocketDynamicLoggingEnabled 0
 #endif
 
 #if GCDAsyncSocketDynamicLoggingEnabled
-static int logLevel = GCDAsyncSocketLogLevel;
+static LogLevelType logLevel = GCDAsyncSocketLogLevel;
 
 @interface GCDAsyncSocket (GCDAsyncSocketDynamicLogging)
 
-+ (int)ddLogLevel;
-+ (void)ddSetLogLevel:(int)level;
++ (LogLevelType)ddLogLevel;
++ (void)ddSetLogLevel:(LogLevelType)level;
 
 @end
 
 @implementation GCDAsyncSocket (GCDAsyncSocketDynamicLogging)
 
-+ (int)ddLogLevel
++ (LogLevelType)ddLogLevel
 {
     return logLevel;
 }
 
-+ (void)ddSetLogLevel:(int)level
++ (void)ddSetLogLevel:(LogLevelType)level
 {
     logLevel = level;
 }
@@ -102,7 +135,7 @@ static int logLevel = GCDAsyncSocketLogLevel;
 #else
 
 // Log levels : off, error, warn, info, verbose
-static const int logLevel = GCDAsyncSocketLogLevel;
+static const LogLevelType logLevel = GCDAsyncSocketLogLevel;
 
 #endif
 
