@@ -7046,6 +7046,11 @@ static void CFReadStreamCallback (CFReadStreamRef stream, CFStreamEventType type
 				error = [asyncSocket connectionClosedError];
 			}
 			
+            if (!error)
+            {
+                error = [NSError errorWithDomain:GCDAsyncSocketErrorDomain code:GCDAsyncSocketNoError userInfo:nil];
+            }
+
 			dispatch_async(asyncSocket->socketQueue, ^{ @autoreleasepool {
 				
 				LogCVerbose(@"CFReadStreamCallback - Other");
@@ -7113,6 +7118,11 @@ static void CFWriteStreamCallback (CFWriteStreamRef stream, CFStreamEventType ty
 				error = [asyncSocket connectionClosedError];
 			}
 			
+            if (!error)
+            {
+                error = [NSError errorWithDomain:GCDAsyncSocketErrorDomain code:GCDAsyncSocketNoError userInfo:nil];
+            }
+
 			dispatch_async(asyncSocket->socketQueue, ^{ @autoreleasepool {
 				
 				LogCVerbose(@"CFWriteStreamCallback - Other");
